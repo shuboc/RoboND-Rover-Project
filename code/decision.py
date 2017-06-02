@@ -21,6 +21,7 @@ def decision_step(Rover):
                 # Get stuck for over 2 second, try go backward
                 if Rover.vel < 0.2 and time.time() - Rover.forward_ts > 5:
                     Rover.mode = 'backward'
+                    Rover.backward_ts = time.time()
                 # If mode is forward, navigable terrain looks good
                 # and velocity is below max, then throttle
                 if Rover.vel < Rover.max_vel:
@@ -41,14 +42,18 @@ def decision_step(Rover):
                     Rover.mode = 'stop'
 
         elif Rover.mode == 'backward':
-            if Rover.vel > -0.5:
-                Rover.steer = 0
-                Rover.throttle = -Rover.throttle_set
-            elif Rover.vel <= -0.5:
+            print(time.time() - Rover.backward_ts)
+            # Stop going back if speed is reached or got stuck
+            if Rover.vel <= -0.5 or (Rover.vel >= -0.2 and time.time() - Rover.backward_ts > 5):
                 Rover.throttle = 0
                 Rover.brake = Rover.brake_set
                 Rover.steer = 0
+                Rover.backward_ts = None
                 Rover.mode = 'stop'
+            # Go backward!
+            elif Rover.vel > -0.5:
+                Rover.steer = 0
+                Rover.throttle = -Rover.throttle_set
 
         # If we're already in "stop" mode then make different decisions
         elif Rover.mode == 'stop':
