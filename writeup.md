@@ -58,15 +58,32 @@ def obstacle_thresh(img):
     return color_select
 ```
 
-![alt text][image1]
-
 #### 2. Populate the `process_image()` function with the appropriate analysis steps to map pixels identifying navigable terrain, obstacles and rock samples into a worldmap.  Run `process_image()` on your test data using the `moviepy` functions provided to create video output of your result. 
 
-TODO
+First, I use the color threshing technique mentioned above to identify navigable terrain, rock sameples and obstacles.
 
-Describe in your writeup how you modified the process_image() to demonstrate your analysis and how you created a worldmap. Include your video output with your submission.
+```
+threshed = color_thresh(warped)
+sample_threshed = sample_thresh(warped)
+obstacle_threshed = obstacle_thresh(warped)
+```
 
-![alt text][image2]
+Then, the location on the map of these items can be mapped via a `warped_img_to_world` function I wrote, which consists of converting to rover-centric coordinates and then transforming to world map coordinates.
+
+```
+x_pix_world, y_pix_world = warped_img_to_world(threshed)
+x_sample_world, y_sample_world = warped_img_to_world(sample_threshed)
+x_obstable_threshed, y_obstable_threshed = warped_img_to_world(obstacle_threshed)
+```
+
+Finally, I color the position in the world map with different colors for navigable terrain, obstacles and rock samples:
+
+```
+data.worldmap[y_obstable_threshed, x_obstable_threshed, 0] += 1
+data.worldmap[y_sample_world, x_sample_world, 1] += 1
+data.worldmap[y_pix_world, x_pix_world, 2] += 1
+```
+
 ### Autonomous Navigation and Mapping
 
 #### 1. Fill in the `perception_step()` (at the bottom of the `perception.py` script) and `decision_step()` (in `decision.py`) functions in the autonomous mapping scripts and an explanation is provided in the writeup of how and why these functions were modified as they were.
@@ -106,15 +123,13 @@ In `translate_pix`, we get the absolute position in world coordinates first by d
 
 #### 2. Launching in autonomous mode your rover can navigate and map autonomously.  Explain your results and how you might improve them in your writeup.  
 
-**Note: running the simulator with different choices of resolution and graphics quality may produce different results, particularly on different machines!  Make a note of your simulator settings (resolution and graphics quality set on launch) and frames per second (FPS output to terminal by `drive_rover.py`) in your writeup when you submit the project so your reviewer can reproduce your results.**
+*Experimental Enviroment: Macbook Pro 13.3', OSX 10.12.4, Resolution: 800x600, Image Quality: Good, FPS: 25~32*
 
-**Experimental Enviroment: Macbook Pro 13.3', OSX 10.12.4, Resolution: 800x600, Image Quality: Good, FPS: 25~32**
+The original method will stop and take a turn when there is no enough navigable terrain. However, there exists some scenario where there is enough navigable terrain but the rover can't move, e.g., getting stucked by obstacles.
 
-The original method will stop and take a turn when there is no enough navigable terrains. However, there exists some scenario where there is enough navigable terrains but the rover can't move, e.g., stucking by obstacles.
+Therefore, I add the mechanism of detecting getting stucked. The main idea is record an initial timestamp when forward mode is on, and if the speed is still very low after being in forward mode for 5 seconds, it means getting stucked.
 
-I enhance the by adding the mechanism of detecting stucking. The main idea is record an initial timestamp when forward mode in on, and if the speed is slow after being in forward mode for 5 seconds, it means getting stucked.
-
-To solve the stucking problem, I add an new mode called `backward`. It can be triggered when a stucking problem is detected. The rover will go back until a speed limit is reached, and go back to the `stop` mode to either take a turn or moving forward
+To get away from being stucked, I add an new mode called `backward`, which can be triggered when the problem is detected. In this mode, the rover will moving backward until a speed limit is reached, and change to `stop` mode to either take a turn or moving forward.
 
 **Future work**
 
